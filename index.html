@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Crypto Risk Calculator — Responsive (Safe Examples)</title>
+  <style>
+    :root{
+      /* Dark (default) palette */
+      --bg:#071428;
+      --card: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      --muted:#94a3b8;
+      --accent:#06b6d4;
+      --accent-2:#7c3aed;
+      --glass: rgba(255,255,255,0.03);
+      --success:#10b981; --danger:#ef4444;
+      --text: #e6eef8;
+      --card-border: rgba(255,255,255,0.04);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    body.light {
+      --bg: #f5f5f5;
+      --card: linear-gradient(180deg, #ffffff, #ffffff);
+      --muted: #55606a;
+      --accent: #007bff;
+      --accent-2: #6f42c1;
+      --glass: rgba(0,0,0,0.04);
+      --success:#1f8f3b; --danger:#cc2b2b;
+      --text: #111827;
+      --card-border: rgba(0,0,0,0.06);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: linear-gradient(180deg,var(--bg) 0%, #081225 100%);
+      color:var(--text);
+      min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      -webkit-text-size-adjust:100%;
+      padding:28px 18px; /* smaller side padding for mobile */
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    /* container centers horizontally but allows vertical scroll (no vertical centering!) */
+    .wrap{width:100%; max-width:980px; margin:0 auto}
+
+    header{display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap}
+    header h1{font-size:clamp(16px,2.6vw,18px); margin:0}
+    header .meta{color:var(--muted); font-size:13px}
+
+    .top-right { margin-left:auto; display:flex; gap:8px; align-items:center }
+    .toggle-btn {
+      background:transparent; border:1px solid var(--card-border); padding:8px 10px; border-radius:10px; color:var(--text);
+      cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:8px
+    }
+
+    .card{background:var(--card); border:1px solid var(--card-border); padding:18px; border-radius:14px; backdrop-filter: blur(6px);}
+
+    /* grid uses minmax so the right column can shrink on narrow screens without causing overflow */
+    .grid{display:grid; grid-template-columns:1fr minmax(260px,420px); gap:18px; align-items:start}
+
+    .form{padding:6px; min-width:0}
+    label{display:block; font-size:13px; color:var(--muted); margin-bottom:6px}
+
+    input[type=text], input[type=number], select{width:100%; padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:var(--glass); color:inherit; outline:none}
+    input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .controls{display:flex; gap:8px; margin-top:12px}
+    button.primary{padding:10px 12px; border-radius:8px; border:0; cursor:pointer; background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#042027; font-weight:600}
+    button.ghost{background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted); padding:10px 12px; border-radius:8px; cursor:pointer}
+
+    .output{padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));}
+    .kpi{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+    .k{background:rgba(255,255,255,0.02); padding:10px;border-radius:8px; min-height:54px}
+    .k h3{margin:0;font-size:13px;color:var(--muted)}
+    .k p{margin:6px 0 0;font-size:16px;font-weight:600; color:var(--text)}
+
+    /* messages */
+    .warn{margin-top:10px;padding:12px;border-radius:8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.12);color:var(--danger)}
+    .critical{margin-top:10px;padding:12px;border-radius:8px;background:rgba(239,68,68,0.14);border:1px solid rgba(239,68,68,0.22);color:var(--danger);font-weight:600}
+    .ok{margin-top:10px;padding:12px;border-radius:8px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.08);color:var(--success)}
+    .suggest{margin-top:8px;padding:10px;border-radius:8px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);color:var(--muted);font-size:13px}
+
+    .bar{height:14px;background:rgba(255,255,255,0.04);border-radius:8px;overflow:hidden}
+    .bar > i{display:block;height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-2));}
+
+    /* Visual planner specific */
+    .visual-planner { margin-top:18px; }
+    .price-bar { position:relative; height:8px; background:rgba(255,255,255,0.04); margin:14px 0; border-radius:4px; overflow:visible }
+
+    .marker { position:absolute; top:0; font-size:12px; font-weight:700; padding:6px 8px; border-radius:6px; transform:translate(-50%,-160%); white-space:nowrap; user-select:none; pointer-events:none }
+    .marker.small { transform:translate(-50%,-120%); font-size:11px; padding:4px 6px; font-weight:600 }
+    .sl { background: #ef4444; color: white; }
+    .entry { background: var(--accent); color: #042027; }
+    .tp { background: #10b981; color: white; }
+    .liquidation { background: #ff8c00; color:white; }
+
+    .scale { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); user-select:none; margin-top:6px; gap:4px }
+    .scale div{ flex:1 1 0; text-align:center }
+
+    /* copy button near inputs */
+    .input-row{display:flex; gap:8px; align-items:center}
+    .copy-btn{padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:var(--glass); color:var(--muted); cursor:pointer; font-size:13px}
+
+    footer{margin-top:12px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:13px}
+
+    /* Responsive tweaks */
+    @media (max-width:880px){
+      .grid{grid-template-columns:1fr}
+      .card{padding:12px}
+      .kpi{grid-template-columns:repeat(2,1fr)}
+      header{align-items:flex-start}
+      .top-right{order:3; width:100%; justify-content:flex-end}
+      .scale{font-size:11px}
+      .marker{font-size:11px}
+    }
+
+    @media (max-width:480px){
+      body{padding:14px}
+      header h1{font-size:16px}
+      .kpi{grid-template-columns:1fr}
+      .controls{flex-direction:column}
+      .toggle-btn{padding:6px 8px; font-size:12px}
+      .copy-btn{padding:6px 8px; font-size:12px}
+      .price-bar{margin:10px 0}
+      .marker{transform:translate(-50%,-145%)}
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="#06202A"/><path d="M6 15L10 9L14 12L18 6" stroke="#06b6d4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div>
+        <h1>Crypto Risk Calculator</h1>
+        <div class="meta">Fixed Your Risk and Calculate your Reward — now with liquidation safety checks + safe examples</div>
+      </div>
+
+      <div class="top-right">
+        <button id="modeToggle" class="toggle-btn">🌙 Dark / Light</button>
+      </div>
+    </header>
+
+    <div class="card grid">
+      <!-- LEFT: form -->
+      <div class="form">
+        <label>Total Capital ($)</label>
+        <input id="capital" type="number" inputmode="decimal" step="0.01" value="500" />
+
+        <div style="height:10px"></div>
+
+        <label>Risk per Trade ($)</label>
+        <input id="risk" type="number" inputmode="decimal" step="0.01" value="20" />
+
+        <div style="height:10px"></div>
+
+        <label>Trade Type</label>
+        <select id="positionType">
+          <option value="long">Long</option>
+          <option value="short">Short</option>
+        </select>
+
+        <div style="height:10px"></div>
+
+        <label>Entry Price ($)</label>
+        <div class="input-row">
+          <input id="entry" type="number" inputmode="decimal" step="0.01" value="100" />
+          <button class="copy-btn" type="button" onclick="copyVal('entry')">Copy</button>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <label>Stop-Loss Price ($)</label>
+        <div class="input-row">
+          <input id="stopLoss" type="number" inputmode="decimal" step="0.01" value="95" />
+          <button class="copy-btn" type="button" onclick="copyVal('stopLoss')">Copy</button>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <label>Take-Profit Price ($)</label>
+        <div class="input-row">
+          <input id="takeProfit" type="number" inputmode="decimal" step="0.01" value="115" />
+          <button class="copy-btn" type="button" onclick="copyVal('takeProfit')">Copy</button>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <div class="controls">
+          <button id="calculateBtn" class="primary">Calculate</button>
+          <button id="resetBtn" class="ghost" type="button">Reset</button>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: results / KPIs / visual planner -->
+      <aside>
+        <div class="output">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px">
+            <strong>Results</strong>
+            <div id="summary" style="color:var(--muted);font-size:13px">—</div>
+          </div>
+
+          <div style="height:10px"></div>
+
+          <div class="kpi">
+            <div class="k">
+              <h3>Position Size</h3>
+              <p id="positionSize">—</p>
+            </div>
+            <div class="k">
+              <h3>Total Investment</h3>
+              <p id="totalInvestment">—</p>
+            </div>
+            <div class="k">
+              <h3>Leverage Required</h3>
+              <p id="leverageRequired">—</p>
+            </div>
+            <div class="k">
+              <h3>Estimated Loss</h3>
+              <p id="estimatedLoss">—</p>
+            </div>
+            <div class="k">
+              <h3>Expected Profit</h3>
+              <p id="expectedProfit">—</p>
+            </div>
+            <div class="k">
+              <h3>Risk-Reward</h3>
+              <p id="rrRatio">—</p>
+            </div>
+
+            <div class="k">
+              <h3>Liquidation Price</h3>
+              <p id="liqPrice"><span id="liqPriceVal">—</span> <button class="copy-btn" type="button" onclick="copyVal('liqPriceVal', true)">Copy</button></p>
+            </div>
+          </div>
+
+          <div class="visual-planner" id="visualPlanner" style="display:none;">
+            <h3 style="margin:13px 0 35px 0;color:var(--muted);font-size:16px">SL / TP Visual Planner <hr> </h3>
+            <div class="price-bar" id="priceBar">
+              <div id="slMarker" class="marker sl">S</div>
+              <div id="entryMarker" class="marker entry">E</div>
+              <div id="tpMarker" class="marker tp">T</div>
+              <div id="liquidationMarker" class="marker liquidation">l</div>
+            </div>
+            <div class="scale">
+              <div>10%</div>
+              <div>20%</div>
+              <div>30%</div>
+              <div>40%</div>
+              <div>50%</div>
+              <div>60%</div>
+              <div>70%</div>
+              <div>80%</div>
+              <div>90%</div>
+              <div>100%</div>
+            </div>
+          </div>
+
+          <div id="messages" style="margin-top:10px"></div>
+        </div>
+
+        <footer>
+          <div>Created By: Muhammad Arsalan Khan</div>
+          <div id="ver" style="color:var(--muted)">Version: 1.8 • Safety v1</div>
+        </footer>
+      </aside>
+    </div>
+
+  </div>
+
+  <script>
+    // Utilities & DOM shortcuts
+    const $ = id => document.getElementById(id)
+    function fmtNum(n) {
+      if (!isFinite(n)) return '—'
+      return Number(n).toLocaleString(undefined, {maximumFractionDigits:8}).replace(/\.?0+$/,'')
+    }
+    function money(n){ 
+      const num = Number(n)
+      if (!isFinite(num)) return '—'
+      return '$' + num.toLocaleString(undefined, {maximumFractionDigits:2})
+    }
+
+    // Clipboard copy helper (works for inputs and text spans)
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      try { document.execCommand('copy') } catch(e) {}
+      document.body.removeChild(ta)
+    }
+
+    function copyVal(id, isText=false) {
+      try {
+        let raw = ''
+        if (isText) {
+          const el = $(id)
+          if (!el) return
+          raw = el.textContent || el.innerText || ''
+        } else {
+          const el = $(id)
+          if (!el) return
+          raw = el.value
+        }
+        if (!raw) return
+        const cleaned = String(raw).replace(/\$/g, '').replace(/,/g, '').trim()
+        if (!cleaned || cleaned === '—') return
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(cleaned).catch(()=> fallbackCopy(cleaned))
+        } else {
+          fallbackCopy(cleaned)
+        }
+      } catch (err) {
+        // silent fail
+      }
+    }
+
+    // Toggle dark/light
+    const modeBtn = $('modeToggle')
+    modeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('light')
+      modeBtn.textContent = document.body.classList.contains('light') ? '☀️ Light' : '🌙 Dark'
+    })
+
+    // --- Core calculation + safety checks ---
+    function calculate(e){
+      if (e) e.preventDefault()
+
+      // read inputs
+      const capital = parseFloat($('capital').value)
+      const risk = parseFloat($('risk').value)
+      const entry = parseFloat($('entry').value)
+      const stopLoss = parseFloat($('stopLoss').value)
+      const takeProfit = parseFloat($('takeProfit').value)
+      const type = $('positionType').value
+
+      const messages = []
+      $('messages').innerHTML = ''
+
+      // Basic validation
+      if (!isFinite(capital) || !isFinite(risk) || !isFinite(entry) || !isFinite(stopLoss)) {
+        messages.push({type:'warn', text:'Please enter numeric values for capital, risk, entry and stop-loss.'})
+        showMessages(messages); return
+      }
+      if (risk <= 0 || capital <= 0) {
+        messages.push({type:'warn', text:'Capital and risk must be positive.'})
+        showMessages(messages); return
+      }
+
+      if (risk > capital) {
+        // not allowed in this UI (user trying to risk more than account)
+        messages.push({type:'warn', text:'Risk cannot be more than your total capital.'})
+        showMessages(messages); return
+      }
+
+      // compute basic trade numbers
+      let riskPerCoin, rewardPerCoin
+      if (type === 'long') {
+        if (stopLoss >= entry || (isFinite(takeProfit) && takeProfit <= entry)) {
+          if (isFinite(takeProfit)) {
+            messages.push({type:'warn', text:'For LONG: Stop-loss must be less than Entry and Take-profit greater than Entry.'})
+            showMessages(messages); return
+          }
+        }
+        riskPerCoin = entry - stopLoss
+        rewardPerCoin = isFinite(takeProfit) ? (takeProfit - entry) : null
+      } else {
+        if (stopLoss <= entry || (isFinite(takeProfit) && takeProfit >= entry)) {
+          if (isFinite(takeProfit)) {
+            messages.push({type:'warn', text:'For SHORT: Stop-loss must be greater than Entry and Take-profit less than Entry.'})
+            showMessages(messages); return
+          }
+        }
+        riskPerCoin = stopLoss - entry
+        rewardPerCoin = isFinite(takeProfit) ? (entry - takeProfit) : null
+      }
+
+      if (riskPerCoin <= 0) {
+        messages.push({type:'warn', text:'Stop distance must be positive (entry vs stop-loss).'})
+        showMessages(messages); return
+      }
+
+      // position size determined by your desired risk
+      const positionSize = risk / riskPerCoin
+      const totalInvestment = positionSize * entry
+      const leverage = capital > 0 ? (totalInvestment / capital) : NaN
+      const estimatedLoss = risk
+      const expectedProfit = (rewardPerCoin !== null) ? (rewardPerCoin * positionSize) : null
+      const rrRatio = (expectedProfit !== null && estimatedLoss>0) ? (expectedProfit / estimatedLoss) : null
+
+      // Simplified liquidation proxy used in original tool
+      // NOTE: real exchanges use more complex formulas with maintenance margin, fees etc.
+      let liquidationPrice
+      if (type === 'long') {
+        liquidationPrice = entry - (riskPerCoin * leverage)
+      } else {
+        liquidationPrice = entry + (riskPerCoin * leverage)
+      }
+
+      // update KPIs
+      $('positionSize').textContent = isFinite(positionSize) ? fmtNum(positionSize) + ' coins' : '—'
+      $('totalInvestment').textContent = isFinite(totalInvestment) ? money(totalInvestment.toFixed(2)) : '—'
+      $('leverageRequired').textContent = (isFinite(leverage) && leverage>1) ? leverage.toFixed(2) + 'x' : 'None'
+      $('estimatedLoss').textContent = money(estimatedLoss.toFixed(2))
+      $('expectedProfit').textContent = (expectedProfit!==null) ? money(expectedProfit.toFixed(2)) : '—'
+      $('rrRatio').textContent = (rrRatio!==null) ? '1 : ' + Number(rrRatio).toFixed(2) : '—'
+      $('liqPriceVal').textContent = isFinite(liquidationPrice) ? fmtNum(liquidationPrice) : '—'
+      $('summary').textContent = isFinite(positionSize) ? `${fmtNum(positionSize)} units @ ${fmtNum(entry)}` : '—'
+
+      // Visual planner (unchanged)
+      const prices = [stopLoss, entry, takeProfit].filter(v => isFinite(v))
+      prices.push(liquidationPrice)
+      const minPrice = Math.min(...prices)
+      const maxPrice = Math.max(...prices)
+      const range = maxPrice - minPrice
+
+      if (!isFinite(minPrice) || !isFinite(maxPrice) || range === 0 || !isFinite(liquidationPrice)) {
+        $('visualPlanner').style.display = 'none'
+      } else {
+        $('visualPlanner').style.display = 'block'
+        const slPos = ((stopLoss - minPrice) / range) * 100
+        const entryPos = ((entry - minPrice) / range) * 100
+        const tpPos = (isFinite(takeProfit)) ? ((takeProfit - minPrice) / range) * 100 : null
+        const liqPos = ((liquidationPrice - minPrice) / range) * 100
+
+        $('slMarker').style.left = `${clampPercent(slPos)}%`
+        $('entryMarker').style.left = `${clampPercent(entryPos)}%`
+        $('liquidationMarker').style.left = `${clampPercent(liqPos)}%`
+
+        if (tpPos !== null) {
+          $('tpMarker').style.display = 'block'
+          $('tpMarker').style.left = `${clampPercent(tpPos)}%`
+        } else {
+          $('tpMarker').style.display = 'none'
+        }
+      }
+
+      // --- Safety check: will liquidation occur BEFORE stop? ---
+      const willLiquidateBeforeStop = (type === 'long' && liquidationPrice > stopLoss) || (type === 'short' && liquidationPrice < stopLoss)
+
+      if (willLiquidateBeforeStop) {
+        // Critical warning
+        messages.push({
+          type: 'critical',
+          html: `⚠️ <strong>Liquidation (${fmtNum(liquidationPrice)}) will trigger before your Stop (${fmtNum(stopLoss)}).</strong><br>This means your intended risk of ${money(estimatedLoss)} may not hold — the position could be liquidated earlier and you could lose a lot more.`
+        })
+
+        // Suggestion logic: keep position size (since risk is fixed), but change how much capital (margin) you allocate
+        // Total investment = positionSize * entry (fixed for given risk and stop-distance)
+        // To ensure liquidation <= stop, the `capital_allocated` used for calculating leverage should satisfy: capital_allocated <= totalInvestment
+        // We'll present 2 examples: A) allocate capital = totalInvestment (no extra leverage needed) B) allocate a smaller capital (example $100) to show leverage required
+
+        const totalInvestRounded = Number(totalInvestment.toFixed(2))
+
+        // Example A: allocate capital = totalInvestment (makes leverage ~= 1)
+        const exA = Math.max(0.01, totalInvestRounded) // avoid 0
+        const levA = (exA>0) ? (totalInvestment / exA) : NaN
+
+        // Example B: pick friendly small example capital (prefer $100 if sensible)
+        let exB = 100
+        if (totalInvestment < 100) exB = Math.max(1, Math.round(totalInvestment/2))
+        if (exB > totalInvestment) exB = Math.round(totalInvestment) // keep it <= totalInvestment for meaningful leverage
+        const levB = (exB>0) ? (totalInvestment / exB) : NaN
+
+        // Build suggestion HTML
+        const suggestHTML = `
+          <div class="suggest"><strong>Safe examples & what to change</strong>
+          <ul style="margin:8px 0 0 18px; padding:0; color:var(--muted)">
+            <li><strong>Use at most <code>${money(totalInvestment.toFixed(2))}</code> as the allocated capital (margin) for this trade.</strong>
+            This makes leverage ≈ <code>1x</code> and pushes liquidation to the Stop price.</li>
+            <li><em>Example A</em>: <strong>Allocate ${money(exA)}</strong> — Position size stays <code>${fmtNum(positionSize)} coins</code>, Leverage ≈ <code>${levA.toFixed(2)}x</code> (${levA<=1? 'No additional leverage needed' : 'higher leverage'})</li>
+            <li><em>Example B</em>: <strong>Allocate ${money(exB)}</strong> — Position size: <code>${fmtNum(positionSize)} coins</code>, Leverage ≈ <code>${levB.toFixed(2)}x</code></li>
+          </ul>
+          <div style="margin-top:8px;color:var(--muted);font-size:13px">Other options: widen your Stop (larger stop distance), reduce desired risk, or reduce position size manually. This tool keeps position size fixed to preserve your requested risk.</div>
+          </div>
+        `
+
+        messages.push({type:'warn', html: suggestHTML})
+
+        // Add a short math explanation block so user understands why
+        const mathHTML = `
+          <div class="suggest" style="margin-top:8px"><strong>Why this happens (quick math):</strong>
+          <div style="margin-top:6px;color:var(--muted);font-size:13px;line-height:1.4">
+            Position size = risk / (entry - stop) = <code>${fmtNum(positionSize)}</code> coins<br>
+            Total investment = positionSize × entry = <code>${money(totalInvestment.toFixed(2))}</code><br>
+            Leverage ≈ totalInvestment / allocated_capital<br>
+            Liquidation (approx) = entry {${type==='long'?'-':'+'} } (entry - stop) × leverage<br>
+            To ensure liquidation occurs at or past your Stop, allocated_capital should be ≤ total investment.
+          </div>
+          </div>
+        `
+        messages.push({type:'warn', html: mathHTML})
+
+      } else {
+        messages.push({type:'ok', text:`✅ Setup valid — estimated risk $${estimatedLoss.toFixed(2)} (liquidation ${fmtNum(liquidationPrice)} occurs after stop).`})
+      }
+
+      // If there were other less severe messages (like small warnings), preserve them
+      if (positionSize <= 0) messages.push({type:'warn', text:'Position size computed as 0 or negative — check risk/stop values.'})
+
+      showMessages(messages)
+
+      // store last calc for quick copy/paste
+      window._lastCalc = { capital, risk, entry, stopLoss, takeProfit, type, positionSize, totalInvestment, leverage, estimatedLoss, expectedProfit, rrRatio, liquidationPrice }
+    }
+
+    function clampPercent(v){
+      if (!isFinite(v)) return 0
+      if (v < 0) return 0
+      if (v > 100) return 100
+      return v
+    }
+
+    function showMessages(msgs){
+      const box = $('messages')
+      box.innerHTML = ''
+      msgs.forEach(m => {
+        const div = document.createElement('div')
+        // allow html blocks when provided
+        const cls = m.type==='critical' ? 'critical' : (m.type==='warn' ? 'warn' : (m.type==='ok' ? 'ok' : 'suggest'))
+        div.className = cls
+        if (m.html) div.innerHTML = m.html
+        else div.textContent = m.text
+        box.appendChild(div)
+      })
+    }
+
+    // Reset to defaults (keeps field defaults similar to original)
+    function resetForm(){
+      $('capital').value = 500
+      $('risk').value = 20
+      $('positionType').value = 'long'
+      $('entry').value = 100
+      $('stopLoss').value = 95
+      $('takeProfit').value = 115
+      $('summary').textContent = '—'
+      $('positionSize').textContent = '—'
+      $('totalInvestment').textContent = '—'
+      $('leverageRequired').textContent = '—'
+      $('estimatedLoss').textContent = '—'
+      $('expectedProfit').textContent = '—'
+      $('rrRatio').textContent = '—'
+      $('liqPriceVal').textContent = '—'
+      $('visualPlanner').style.display = 'none'
+      $('messages').innerHTML = ''
+      window._lastCalc = null
+    }
+
+    // Attach events
+    $('calculateBtn').addEventListener('click', calculate)
+    $('resetBtn').addEventListener('click', resetForm)
+    document.querySelectorAll('input, select').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(e) }))
+
+    // init
+    resetForm()
+  </script>
+</body>
+</html>
